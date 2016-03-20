@@ -12,11 +12,17 @@ import android.widget.TextView;
 import com.example.kimjongho.androidstudy.api.GitHubService;
 import com.example.kimjongho.androidstudy.api.model.Contributor;
 import com.google.common.collect.Lists;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
+import java.io.IOException;
 import java.util.List;
 
 import butterknife.Bind;
 import butterknife.ButterKnife;
+import okhttp3.Interceptor;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -24,14 +30,20 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
-
     public static final String API_URL = "https://api.github.com";
 
-    @Bind(R.id.recycler_view) RecyclerView recyclerView;
-    @Bind(R.id.api_response) TextView responseTextView;
-    @Bind(R.id.api_call_button) View apiButton;
+    // retrofit
+    @Bind(R.id.recycler_view) RecyclerView retrofitRecyclerView;
+    @Bind(R.id.api_response) TextView retrofitResponseTextView;
+    @Bind(R.id.api_call_button) View retrofitApiButton;
+
+    // OKHTTP
+    @Bind(R.id.recycler_view_okhttp) RecyclerView okhttpRecyclerView;
+    @Bind(R.id.api_response_okhttp) TextView okhttpResponseTextView;
+    @Bind(R.id.api_call_button_okhttp) View okhttpApiButton;
 
     private ContributorAdapter adapter;
+    private Gson gson;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
                 .build();
         final GitHubService gitHubService = retrofit.create(GitHubService.class);
 
-        apiButton.setOnClickListener(new View.OnClickListener() {
+        retrofitApiButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Call<List<Contributor>> call = gitHubService.contributors("square", "retrofit");
@@ -53,29 +65,86 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(Call<List<Contributor>> call, Response<List<Contributor>> response) {
                         List<Contributor> contributors = response.body();
-                        responseTextView.setText(response.message());
-                        setContent(contributors);
+                        retrofitResponseTextView.setText(response.message());
+                        setRetrofitContent(contributors);
                     }
 
                     @Override
                     public void onFailure(Call<List<Contributor>> call, Throwable t) {
-
                     }
                 });
             }
         });
+
+        gson = new Gson();
+        final OkHttpClient okHttpClient = new OkHttpClient.Builder()
+                .addInterceptor(new Interceptor() {
+                    @Override
+                    public okhttp3.Response intercept(Chain chain) throws IOException {
+                        Request request = chain.request();
+                        okhttp3.Response response = chain.proceed(request);
+                        return response;
+                    }
+                })
+                .addNetworkInterceptor(new Interceptor() {
+                    @Override
+                    public okhttp3.Response intercept(Chain chain) throws IOException {
+                        Request request = chain.request();
+                        okhttp3.Response response = chain.proceed(request);
+                        return response;
+                    }
+                })
+                .build();
+
+        okhttpApiButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Request request = new Request.Builder()
+                        .url("https://api.github.com/repos/square/retrofit/contributors")
+                        .build();
+
+                okHttpClient.newCall(request)
+                        .enqueue(new okhttp3.Callback() {
+                            @Override
+                            public void onFailure(okhttp3.Call call, IOException e) {
+
+                            }
+
+                            @Override
+                            public void onResponse(okhttp3.Call call, okhttp3.Response response) throws IOException {
+                                String result = response.body().string();
+                                final List<Contributor> contributors = gson.fromJson(result, new TypeToken<List<Contributor>>(){}.getType());
+                                MainActivity.this.runOnUiThread(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        setOkhttpContent(contributors);
+                                    }
+                                });
+                            }
+                        });
+            }
+        });
+
     }
 
     /**
      * API 로 받아온 데이터를 {@link RecyclerView} 에 그린다
      * @param contributors API response
      */
-    private void setContent(List<Contributor> contributors) {
+    private void setRetrofitContent(List<Contributor> contributors) {
         adapter = new ContributorAdapter(contributors);
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
-        recyclerView.setLayoutManager(layoutManager);
-        recyclerView.setAdapter(adapter);
+        retrofitRecyclerView.setLayoutManager(layoutManager);
+        retrofitRecyclerView.setAdapter(adapter);
+    }
+
+    private void setOkhttpContent(List<Contributor> contributors) {
+        adapter = new ContributorAdapter(contributors);
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
+        okhttpRecyclerView.setLayoutManager(layoutManager);
+        okhttpRecyclerView.setAdapter(adapter);
     }
 
     /**
