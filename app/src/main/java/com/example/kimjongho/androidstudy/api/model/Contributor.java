@@ -1,6 +1,7 @@
 package com.example.kimjongho.androidstudy.api.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.gson.annotations.SerializedName;
 
 public class Contributor {
 
@@ -11,6 +12,7 @@ public class Contributor {
     private int contributions;
 
     @JsonProperty("html_url")
+    @SerializedName("html_url")
     private String htmlUrl;
 
     public Contributor() {
