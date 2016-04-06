@@ -11,6 +11,10 @@ import android.widget.TextView;
 
 import com.example.kimjongho.androidstudy.api.GitHubService;
 import com.example.kimjongho.androidstudy.api.model.Contributor;
+import com.example.kimjongho.androidstudy.jackson.JacksonConverterFactory;
+import com.example.kimjongho.androidstudy.recyclerview.DividerItemDecoration;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -27,7 +31,6 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
     public static final String API_URL = "https://api.github.com";
@@ -44,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
 
     private ContributorAdapter adapter;
     private Gson gson;
+    private ObjectMapper objectMapper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,9 +55,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
+        initializeMapper();
+
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(API_URL)
-                .addConverterFactory(GsonConverterFactory.create())
+                .addConverterFactory(JacksonConverterFactory.create(objectMapper))
                 .build();
         final GitHubService gitHubService = retrofit.create(GitHubService.class);
 
@@ -136,6 +142,7 @@ public class MainActivity extends AppCompatActivity {
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
         retrofitRecyclerView.setLayoutManager(layoutManager);
+        okhttpRecyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL_LIST));
         retrofitRecyclerView.setAdapter(adapter);
     }
 
@@ -144,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         layoutManager.setOrientation(LinearLayoutManager.VERTICAL);
         okhttpRecyclerView.setLayoutManager(layoutManager);
+        okhttpRecyclerView.addItemDecoration(new DividerItemDecoration(this, DividerItemDecoration.VERTICAL_LIST));
         okhttpRecyclerView.setAdapter(adapter);
     }
 
@@ -153,12 +161,23 @@ public class MainActivity extends AppCompatActivity {
     public static class ContributorItemHolder extends RecyclerView.ViewHolder {
         public TextView loginTextView;
         public TextView contributionsTextView;
+        public TextView htmlUrlTextView;
+
         public ContributorItemHolder(View itemView) {
             super(itemView);
 
             loginTextView = (TextView) itemView.findViewById(R.id.item_login);
             contributionsTextView = (TextView) itemView.findViewById(R.id.item_contributions);
+            htmlUrlTextView = (TextView) itemView.findViewById(R.id.item_html_url);
         }
+    }
+
+    /**
+     * initialize Jackson ObjectMapper
+     */
+    private void initializeMapper() {
+        objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     /**
@@ -180,8 +199,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onBindViewHolder(ContributorItemHolder holder, int position) {
             Contributor contributor = contributors.get(position);
-            holder.contributionsTextView.setText(String.valueOf(contributor.contributions));
-            holder.loginTextView.setText(contributor.login);
+            holder.contributionsTextView.setText(String.valueOf(contributor.getContributions()));
+            holder.loginTextView.setText(contributor.getLogin());
+            holder.htmlUrlTextView.setText(contributor.getHtmlUrl());
         }
 
         @Override

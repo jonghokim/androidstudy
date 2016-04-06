@@ -17,6 +17,10 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    packagingOptions {
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/NOTICE'
+    }
 }
 
 dependencies {
@@ -32,4 +36,8 @@ dependencies {
     compile('com.google.guava:guava:18.0') {
         exclude(group: 'com.google.code.findbugs', module: 'jsr305')
     }
+
+    compile 'com.fasterxml.jackson.core:jackson-annotations:2.7.0'
+    compile 'com.fasterxml.jackson.core:jackson-core:2.7.0'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.7.0'
 }
